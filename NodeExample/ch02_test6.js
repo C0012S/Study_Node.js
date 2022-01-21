@@ -5,8 +5,8 @@ console.log('모듈로 분리한 후 - calc2.add : ' + calc2.add(30, 30));
 
 // 다른 사람이 만든 모듈을 사용할 수도 있다.  
 // 전역 객체 중에 환경 변수를 확인할 수 있는 것들이 있지만, 사용자 변수 위주로 확인이 된다. // 시스템 변수를 확인할 수 있는 방법을 별도로 만들어 놓은 모듈이 있다.
-var nconf = require('nconf'); // nconf : 외장 모듈로 만들어 놓은 것  // 직접 만든 게 아닌 제공되는 모듈인 경우, 상대 path가 아니라 이름만 붙여 주면 된다.
-nconf.env(); // nconf.get('OS')가 undefined로 나와서 추가 -> 해결
+var nconf = require('nconf'); // nconf : 외장 모듈로 만들어 놓은 것  // 직접 만든 게 아닌 제공되는 모듈인 경우, 상대 path가 아니라 이름만 붙여 주면 된다.  // nconf를 이용해서 시스템 환경 변수를 확인할 수 있다.
+nconf.env(); // nconf.get('OS')가 undefined로 나와서 추가 -> 해결  // 시스템 환경 변수를 확인
 var value = nconf.get('OS'); // get에 OS라는 시스템 환경 변수를 지정하면 값을 확인할 수 있다.
 console.log('OS 환경 변수의 값 : ' + value);
 
