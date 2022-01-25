@@ -9,6 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "nconf": "^0.11.3"
+    "moment": "^2.29.1",
+    "nconf": "^0.11.3",
+    "winston": "^3.4.0",
+    "winston-daily-rotate-file": "^4.6.0"
   }
 }
