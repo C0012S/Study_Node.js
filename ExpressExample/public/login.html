@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8"> <!-- meta 태그는 end 태그가 없다. 모바일을 위해서는 meta 태그를 viewport라고 하는 이름으로 해서 더 추가를 해 줘도 된다. -->
+        <title>로그인</title>
+    </head>
+    <body>
+        <h1>로그인</h1>
+        <br>
+        <form method="post"> <!-- method : get 또는 post 지정 -->
+            <table>
+                <tr>
+                    <td><label>아이디</label></td>
+                    <td><input type="text" name="id"></td> <!-- 요청 파라미터는 이 이름으로 날아가게 된다. 사용자가 입력한 것은 input의 name을 기준으로 해서 id는 뭐, password는 뭐, 이런 식으로 해서 서버 쪽에 요청 파라미터로 넘어가는 것이다. -->
+                </tr>
+                <tr>
+                    <td><label>비밀번호</label></td>
+                    <td><input type="password" name="password"></td> <!-- type을 password로 지정해 주면 입력된 글자가 안 보인다. -->
+                </tr>
+            </table>
+            <input type="submit" value="전송" name="">
+        </form> <!-- 특정한 요청 path를 지정하지 않으면, 일단 그대로 날아간다. -->
+    </body>
+</html>
