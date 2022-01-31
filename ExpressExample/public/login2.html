@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>로그인</title>
+    </head>
+    <body>
+        <h1>로그인</h1>
+        <br>
+        <form method="post" action="/process/login"> <!-- 여기에 어떤 요청 path로 요청할 것인지 명시할 수 있다.  form의 method는 GET, POST 방식을 결정하고, action에서 요청 path를 지정한다.  서버에서 라우팅 함수를 만들 때, /process/login이라고 했는데 동일하게 해 주면 된다. 그러면 그 두 개가 매칭이 된다. 그러면 이 요청 자체는 아까 거기서 실행되게 된다. -->
+            <table>
+                <tr>
+                    <td><label>아이디</label></td>
+                    <td><input type="text" name="id"></td>
+                </tr>
+                <tr>
+                    <td><label>비밀번호</label></td>
+                    <td><input type="password" name="password"></td>
+                </tr>
+            </table>
+            <input type="submit" value="전송" name="">
+        </form>
+    </body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>로그인</title>
+    </head>
+    <body>
+        <h1>로그인</h1>
+        <br>
+        <form method="post" action="/process/login/mike"> <!-- 요청 path 수정(/process/login -> /process/login/mike) - 요청 path에 파라미터가 붙어서 들어가는 형태가 된다. --> <!-- 보통은 이제 이 요청 path에 어떤 명령을 할 거냐, add를 할 거냐, list를 할 거냐, 이런 거를 요청 파라미터로 받아서 처리하고 싶은 경우가 많다. 왜냐하면 요청 path라고 하는 걸 가지고 하면, 기능이 뭔지 구분하기가 쉽다. 물론 요청 파라미터로 전부 다 받아서 할 수 있지만, 이렇게 하면 요청 path가 좀 더 명확하게 보이니까 이렇게 하는 경우도 자주 보인다. -->
+            <table>
+                <tr>
+                    <td><label>아이디</label></td>
+                    <td><input type="text" name="id"></td>
+                </tr>
+                <tr>
+                    <td><label>비밀번호</label></td>
+                    <td><input type="password" name="password"></td>
+                </tr>
+            </table>
+            <input type="submit" value="전송" name="">
+        </form>
+    </body>
+</html>
