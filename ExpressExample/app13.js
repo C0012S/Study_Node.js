@@ -7,11 +7,11 @@ var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var expressSession = require('express-session');
 
-var multer = require('multer'); // multer 외장 모듈
+var multer = require('multer'); // multer 외장 모듈 - 파일 업로드 할 수 있게 도와 주는 외장 모듈 // npm install multer --save로 외장 모듈 설치
 var fs = require('fs'); // fs 외장 모듈 - 파일 다루는 것과 관련이 있다고 하면 거의 fs를 사용한다.
 
 // 보안 관련해서, 서버에서 웹 페이지를 조회해서 웹 브라우저에서 봤다고 하면 그 웹 페이지에서 ajax라고 하는 거로 데이터를 요청할 수가 있다. // 지금까지 보면, 페이지를 응답으로 보내 주면 새로운 페이지가 딱 뜬다. 그게 아니라 페이지는 그대로 있는 상태에서 데이터만 주고 받으면서 페이지 안의 태그만 변경하겠다. 또는 태그의 속성만 변경하겠다는 경우는 ajax라는 걸 쓴다. 그리고 이제 서버 쪽에 특정한 정보, 데이터를 요청하면 데이터가 json format의 파일로 오게 된다. 근데 웹 페이지를 연 서버가 있으면 그 웹 서버로만 접속할 수 있게 되어 있다. 그래서 지금은 그거를 표준으로 그런 문제 하나의 서버만 접속할 수 있는 문제는 보안 떄문에 처음에 그렇게 규정되었던 거다. 근데 요즘에는 예를 들어 공공 API라든가 이런 게 있어서 다른 서버로 접속을 클라이언트에서 바로 하고 싶다는 경우가 있을 수 있겠다. 그런 경우, mash up이라고도 하는데 그런 경우에는 다른 서버로 접속해야 하는 경우가 생긴다. 그래서 그걸 위해서 표준 프로토콜에 더 추가한 게 cors라고 하는 게 있다. 그래서 다중 서버 접속이라고 할 수 있는데, 그거는 이제 서버 쪽에서 어떤 정보를 옵션으로 더 주면, 그러면 브라우저가 그렇게 접속한 걸 허용하거나 이렇게 만드는 과정이라고 볼 수 있다. 그것도 구체적으로 알려고 그러면, 프로토콜이 어떻게 되고 뭐 이런 것들 다 이해할 수 있지만, 그런 과정을 cors 외장 모듈이 해결해 준다.
-var cors = require('cors'); // 지금 직접 하는 거에 쓰인다기보다는, 앞으로도 만약에 다른 웹 서버를 다른 데에서, 다른 IP를 가진 곳에서 웹 서버를 접속해서 가져가야겠다는 경우 cors가 사용된다. // cors : 다중 접속, 다중 서버 접속에 대한 문제를 해결하기 위한 것
+var cors = require('cors'); // 지금 직접 하는 거에 쓰인다기보다는, 앞으로도 만약에 다른 웹 서버를 다른 데에서, 다른 IP를 가진 곳에서 웹 서버를 접속해서 가져가야겠다는 경우 cors가 사용된다. // cors : 다중 접속, 다중 서버 접속에 대한 문제를 해결하기 위한 것  // npm install cors --save로 외장 모듈 설치
 
 
 var app = express();
@@ -57,6 +57,41 @@ var upload = multer({
 
 
 var router = express.Router();
+
+
+router.route('/process/photo').post(upload.array('photo', 1), function(req, res) { // photo 이름으로 넘어온 파일이 있으면 배열에 들어간다.
+    console.log('/process/photo 라우팅 함수 호출됨.');
+    
+    var files = req.files;
+    console.log('=== 업로드된 파일 ===');
+    if(files.length > 0) {
+        console.dir(files[0]);
+    }
+    else {
+        console.log('파일이 없습니다.');
+    }
+
+    var originalname;
+    var filename;
+    var mimetype;
+    var size;
+    
+    if (Array.isArray(files)) { // files가 배열이 맞다면
+        for (var i = 0; i < files.length; i++) {
+            originalname = files[i].originalname;
+            filename = files[i].filename;
+            mimetype = files[i].mimetype;
+            size = files[i].size;
+        }
+    }
+    
+    res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+    res.write("<h1>파일 업로드 성공</h1>");
+    res.write("<p>원본 파일 : " + originalname + "</p>");
+    res.write("<p>저장 파일 : " + filename + "</p>"); // 업로드 된 파일을 다른 거와 중복되지 않도록 다른 이름으로 변경한 이름이 filename
+    res.end();
+});
+
 
 router.route('/process/product').get(function(req, res) {
     console.log('/process/product 라우팅 함수 호출됨.');
