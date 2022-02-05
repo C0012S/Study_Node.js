@@ -16,7 +16,7 @@ var MongoClient = require('mongodb').MongoClient; // npm install mongodb --save�
 
 var database;
 
-function connectDB() { // connectDB는 mongoDB를 얘기한다.
+function connectDB() { // connectDB는 mongoDB를 얘기한다.  // mongoDB 연결 오류로 인해 코드 수정
 //    var databaseUrl = 'mongodb://localhost:27017/local'; // 27017 포트로 대기 // local : local database로 접속하기 위한 URL 정보
 //    var databaseUrl = 'mongodb://localhost:27017';
 //    var databaseUrl = 'mongodb://127.0.0.1:27017';
