@@ -17,16 +17,22 @@ var MongoClient = require('mongodb').MongoClient; // npm install mongodb --save�
 var database;
 
 function connectDB() { // connectDB는 mongoDB를 얘기한다.
-    var databaseUrl = 'mongodb://localhost:27017/local' // 27017 포트로 대기 // local : local database로 접속하기 위한 URL 정보
+//    var databaseUrl = 'mongodb://localhost:27017/local'; // 27017 포트로 대기 // local : local database로 접속하기 위한 URL 정보
+//    var databaseUrl = 'mongodb://localhost:27017';
+//    var databaseUrl = 'mongodb://127.0.0.1:27017';
+    var databaseUrl = 'mongodb://127.0.0.1:27017/local';
     
-    MongoClient.connect(databaseUrl, function(err, db) {
+//    MongoClient.connect(databaseUrl, function(err, db) {
+    MongoClient.connect(databaseUrl, {useNewUrlParser:true}, function(err, client) {
         if (err) {
             console.log('데이터베이스 연결 시 에러 발생함.');
+            console.log(err);
             return;
         }
         
         console.log('데이터베이스에 연결됨 : ' + databaseUrl);
-        database = db;
+//        database = db;
+        database = client.db("local");
     });
 } // connectDB 메소드를 호출하면 mongoDB라는 쪽에 연결된다.
 
@@ -51,7 +57,76 @@ app.use(expressSession({
 var router = express.Router();
 
 
+router.route('/process/login').post(function(req, res) {
+    console.log('/process/login 라우팅 함수 호출됨.');
+    
+    var paramId = req.body.id || req.query.id;
+    var paramPassword = req.body.password || req.query.password;
+    console.log('요청 파라미터 : ' + paramId + ', ' + paramPassword);
+    
+    // 이 정보를 가지고 사용자가 데이터베이스의 users 컬랙션(테이블) 안에 들어가 있는지 확인
+    if (database) { // 데이터베이스가 있다면
+        authUser(database, paramId, paramPassword, function(err, docs) {
+            if (err) {
+                console.log('에러 발생.');
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>에러 발생</h1>');
+                res.end();
+                return;
+            }
+            
+            if (docs) {
+                console.dir(docs);
+                
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>사용자 로그인 성공</h1>');
+                res.write('<div><p>사용자 : ' + docs[0].name + '</p></div>');
+                res.write('<br><br><a href="/public/login.html">다시 로그인하기</a>')
+                res.end();
+            }
+            else { // docs가 null 값일 때 = 데이터가 하나도 없다는 뜻이다.
+                console.log('에러 발생.');
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>사용자 데이터 조회 안 됨.</h1>');
+                res.end();
+            }
+        });
+    }
+    else { // connect가 안 된 경우
+        console.log('에러 발생.');
+        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+        res.write('<h1>데이터베이스 연결 안 됨.</h1>');
+        res.end();
+    }
+});
+
+
 app.use('/', router);
+
+
+var authUser = function(db, id, password, callback) { // 별도의 함수를 정의해서 데이터베이스를 다루도록 했다. // 사용자가 브라우저에서 요청하는 브라우저 요청 정보를 파라미터로 받아서 처리하는 라우팅 함수가 필요한데, 거기서 authUser를 쓸 것이다.
+    console.log('authUser 호출됨 : ' + id + ', ' + password);
+    
+    var users = db.collection('users'); // 명령 프롬프트에서 users 컬랙션을 만들었다. collection 함수로 그 컬랙션을 참조할 수 있게 된다.
+    
+    users.find({"id":id, "password":password}).toArray(function(err, docs) { // docs : 결과 문서 객체 // document : 하나의 레코드와 같다.
+        if (err) {
+            callback(err, null); // err : 에러 객체 // null : 정상일 경우 데이터를 넘기기 위한 목적
+            return;
+        }
+        
+        // 에러가 발생하지 않았다면
+        if (docs.length > 0) { // 문서 객체가 여러 개인 경우
+            console.log('일치하는 사용자를 찾음.');
+            callback(null, docs);
+        }
+        else { // 못 찾았을 때
+            console.log('일치하는 사용자를 찾지 못함.');
+            callback(null, null); // 첫 번째 파라미터에 에러 객체를 직접 만들어서 넣어 줄 수도 있다. // 첫 번째 파라미터가 null이면 에러가 아님을 볼 수 있다. // 에러가 아니지만 docs의 내용이 없다.
+        }
+    }); // find 안에 객체를, 객체 안에 찾고자 하는 정보를 넣어 준다. // toArray : 검색한 결과가 나오면 배열로 바꿔 준다.
+};
+
 
 // 404 에러 페이지 처리
 var errorHandler = expressErrorHandler({
