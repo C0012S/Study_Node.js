@@ -10,25 +10,40 @@ var expressSession = require('express-session');
 // 에러 핸들러 모듈 사용
 var expressErrorHandler = require('express-error-handler');
 
-// mongodb 모듈 사용
-var MongoClient = require('mongodb').MongoClient;
+// mongoose 모듈 사용
+var mongoose = require('mongoose');
 
 var database;
+var UserSchema; // UserSchema를 다른 데에서도 쓰고 싶어 위에서 먼저 선언한다.
+var UserModel;
 
-function connectDB() {
+function connectDB() { // mongoose를 사용하는 방식으로 변경
     var databaseUrl = 'mongodb://127.0.0.1:27017/local';
     
-    MongoClient.connect(databaseUrl, {useNewUrlParser:true}, function(err, client) {
-        if (err) {
-            console.log('데이터베이스 연결 시 에러 발생함.');
-            console.log(err);  // 에러 출력
-            return;
-        }
-        
+    mongoose.Promise = global.Promise;
+    mongoose.connect(databaseUrl);
+    database = mongoose.connection;
+    
+    database.on('open', function() { // open 이벤트가 발생했을 때, 연결이 되었는지 확인하고 스키마와 모델 객체를 만들어 준다.
         console.log('데이터베이스에 연결됨 : ' + databaseUrl);
-        database = client.db("local");
+        
+        UserSchema = mongoose.Schema({ // users 위한 테이블
+            id: String,
+            name: String,
+            password: String
+        }); // Schema 객체 return
+        console.log('UserSchema 정의함.'); // 스키마를 정의했다. // 스키마 객체를 만들었다는 의미도 된다.
+        
+        UserModel = mongoose.model('users', UserSchema); // users : 기존의 users collection // 위에서 정의한 UserSchema와 실제 collection 이름을 users라고 해서 서로 연결해 준다. 그게 실제 모델이 된다.
+        console.log('UserModel 정의함.'); // 객체를 생성했다는 얘기다.
+    }); // on : 이벤트가 발생했을 때 처리할 함수를 설정 // open : 데이터베이스 연결되었을 때 호출  // open 이벤트가 발생했을 때 연결된다는 뜻이다.
+    
+    database.on('disconnected', function() { // 연결이 끊어졌을 때, 5 초 후에 다시 연결할 수도 있다. - 실제 실무에서 연결 끊어졌을 때 다시 시도하는 걸 볼 수 있다. // 여기서는 그냥 연결 끊어짐만 출력한다.
+        console.log('데이터베이스 연결 끊어짐.');
     });
-}
+    
+    database.on('error', console.error.bind(console, 'mongoose 연결 에러.'));
+} // 연결
 
 
 var app = express();
@@ -51,7 +66,7 @@ app.use(expressSession({
 var router = express.Router();
 
 
-router.route('/process/login').post(function(req, res) { // 로그인 라우팅 함수
+router.route('/process/login').post(function(req, res) {
     console.log('/process/login 라우팅 함수 호출됨.');
     
     var paramId = req.body.id || req.query.id;
@@ -103,8 +118,7 @@ router.route('/process/addUser').post(function(req, res) {
     
     console.log('요청 파라미터 : ' + paramId + ', ' + paramPassword + ', ' + paramName);
     
-    // 데이터베이스 처리
-    if (database) { // database 객체가 정상적으로 connect가 됐다면 객체가 만들어졌을 것이다.
+    if (database) {
         addUser(database, paramId, paramPassword, paramName, function(err, result) {
             if (err) {
                 console.log('에러 발생.');
@@ -114,7 +128,7 @@ router.route('/process/addUser').post(function(req, res) {
                 return;
             }
             
-            if (result) { // 정상적인 상황
+            if (result) {
                 console.dir(result);
                 
                 res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
@@ -130,7 +144,7 @@ router.route('/process/addUser').post(function(req, res) {
             }
         });
     }
-    else { // 데이터베이스 객체가 없는 경우
+    else {
         console.log('에러 발생.');
         res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
         res.write('<h1>데이터베이스 연결 안 됨.</h1>');
@@ -142,7 +156,7 @@ router.route('/process/addUser').post(function(req, res) {
 app.use('/', router);
 
 
-var authUser = function(db, id, password, callback) { // 조회는 아니지만 조회와 비슷하다. - find로 찾아서 일치하는지 확인한다.
+var authUser = function(db, id, password, callback) {
     console.log('authUser 호출됨 : ' + id + ', ' + password);
     
     var users = db.collection('users');
@@ -165,7 +179,6 @@ var authUser = function(db, id, password, callback) { // 조회는 아니지만 
 };
 
 
-// 사용자 추가하는 함수
 var addUser = function(db, id, password, name, callback) {
     console.log('addUser 호출됨 : ' + id + ', ' + password + ', ' + name);
     
@@ -173,20 +186,20 @@ var addUser = function(db, id, password, name, callback) {
     
     users.insertMany([{"id":id, "password":password, "name":name}], function(err, result) {
         if (err) {
-            callback(err, null); // 에러 처리를 callback으로 넘겨야 데이터베이스 기능만 담당한다.
+            callback(err, null);
             return;
         }
         
-        if (result.insertedCount > 0) { // 정상적으로 insert가 된 경우
+        if (result.insertedCount > 0) {
             console.log('사용자 추가됨 : ' + result.insertedCount);
             callback(null, result);
         }
         else {
-            console.log('추가된 레코드가 없음.'); // 문서 객체가 없다.
+            console.log('추가된 레코드가 없음.');
             callback(null, null);
         }
-    }); // insertMany : 여러 개를 한 번에 insert(추가) 할 수 있는 기능이기 때문에 배열로 객체를 넣을 수 있다.
-}; // addUser 함수 : 데이터베이스 처리를 한 것이다. insert 처리가 된다. 데이터를 추가한 게 된다.
+    });
+};
 
 
 // 404 에러 페이지 처리
