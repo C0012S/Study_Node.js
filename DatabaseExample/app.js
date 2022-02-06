@@ -26,7 +26,7 @@ function connectDB() { // connectDB는 mongoDB를 얘기한다.  // mongoDB 연�
     MongoClient.connect(databaseUrl, {useNewUrlParser:true}, function(err, client) {
         if (err) {
             console.log('데이터베이스 연결 시 에러 발생함.');
-            console.log(err);
+            console.log(err);  // 에러 출력
             return;
         }
         
