@@ -41,6 +41,12 @@ function connectDB() {
             return this.find({id:id}, callback); // this : UserSchema의 this // 실제로 쓰는 건 UserModel에서 사용이 된다.
         }); // findById 이름으로 함수 등록하면 모델 객체에서 사용할 수 있다.
         
+        /*
+        UserSchema.statics.findById = function(id, callback) {
+            return this.find({id:id}, callback); // 함수를 호출한 객체가 this로 참조된다. // this가 UserSchema일 필요없다.
+        }
+        */ // 이런 형태로 사용할 수도 있다.
+        
         UserSchema.static('findAll', function(callback) {
             return this.find({}, callback);
         });
@@ -164,6 +170,51 @@ router.route('/process/addUser').post(function(req, res) {
     }
 });
 
+router.route('/process/listuser').post(function(req, res) {
+    console.log('/process/listuser 라우팅 함수 호출됨.');
+    
+    if (database) {
+        UserModel.findAll(function(err, results) {
+            if (err) {
+                console.log('에러 발생.');
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>에러 발생</h1>');
+                res.end();
+                return;
+            }
+            
+            if (results) {
+                console.dir(results);
+                
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write("<h3>사용자 리스트</h3>");
+                res.write("<div><ul>");
+                
+                for (var i = 0; i < results.length; i++) {
+                    var curId = results[i]._doc.id;
+                    var curName = results[i]._doc.name;
+                    res.write("    <li>#" + i + " -> " + curId + ", " + curName + "</li>");
+                }
+                
+                res.write("</ul></div>");
+                res.end();
+            }
+            else {
+                console.log('에러 발생.');
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>조회된 사용자 없음.</h1>');
+                res.end();
+            }
+        });
+    }
+    else {
+        console.log('에러 발생.');
+        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+        res.write('<h1>데이터베이스 연결 안 됨.</h1>');
+        res.end();
+    }
+});
+
 
 app.use('/', router);
 
@@ -171,7 +222,31 @@ app.use('/', router);
 var authUser = function(db, id, password, callback) {
     console.log('authUser 호출됨 : ' + id + ', ' + password);
     
+    UserModel.findById(id, function(err, results) {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        
+        console.log('아이디 %s로 검색됨.');
+        if (results.length > 0) {
+            if (results[0]._doc.password == password) {
+                console.log('비밀번호 일치함.');
+                callback(null, results);
+            }
+            else {
+                console.log('비밀번호 일치하지 않음.');
+                callback(null, null);
+            }
+        }
+        else {
+            console.log('아이디 일치하는 사용자 없음.');
+            callback(null, null);
+        }
+    });
     
+
+/*
     UserModel.find({"id":id, "password":password}, function(err, docs) {
         if (err) {
             callback(err, null);
@@ -187,6 +262,7 @@ var authUser = function(db, id, password, callback) {
             callback(null, null);
         }
     });
+*/
 };
 
 
@@ -225,3 +301,8 @@ var server = http.createServer(app).listen(app.get('port'), function() {
     
     connectDB();
 });
+
+// 몽구스의 스키마를 정의하고 모델 객체에서 find, 조회, 업데이트, 삭제가 가능하다. // 이거를 실제 라우팅 함수에서 받으면 데이터베이스 조작하는 함수를 별도로 분리해서 처리를 많이 했다. // 스키마를 정의할 때 static으로 추가하면 별도의 데이터베이스 처리 함수 없이 라우팅 함수에서 바로 처리할 수 있어 좀 더 편리한 방법이 될 수 있다. // 자주 사용하는 데이터베이스 조작 함수 같은 경우 static으로 등록하면 좀 더 편리하게 사용할 수 있다.
+// static으로 정의한 것 말고, 모델 객체가 아니라 모델 인스턴스 객체에서 사용할 수 있는 방법도 있다. - 메소드로 추가하면 된다.
+// 모델 객체에서 사용하는 것만으로 웬만큼 처리는 된다. // 모델 객체를 가지고 대부분 데이터 조작을 한다고 보면, 스키마에 static을 이용해서 메소드 추가하는 게 훨씬 유용하다고 생각할 수 있다.
+// 여기까지 스키마에 static을 이용해서 메소드 추가하는 방법이다. // 조금 이따가 비밀번호를 암호화 해서 넣는 방법을 알아본다.
