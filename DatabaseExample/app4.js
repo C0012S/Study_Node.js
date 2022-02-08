@@ -244,25 +244,6 @@ var authUser = function(db, id, password, callback) {
             callback(null, null);
         }
     });
-    
-
-/*
-    UserModel.find({"id":id, "password":password}, function(err, docs) {
-        if (err) {
-            callback(err, null);
-            return;
-        }
-        
-        if (docs.length > 0) {
-            console.log('일치하는 사용자를 찾음.');
-            callback(null, docs);
-        }
-        else {
-            console.log('일치하는 사용자를 찾지 못함.');
-            callback(null, null);
-        }
-    });
-*/
 };
 
 
@@ -306,3 +287,6 @@ var server = http.createServer(app).listen(app.get('port'), function() {
 // static으로 정의한 것 말고, 모델 객체가 아니라 모델 인스턴스 객체에서 사용할 수 있는 방법도 있다. - 메소드로 추가하면 된다.
 // 모델 객체에서 사용하는 것만으로 웬만큼 처리는 된다. // 모델 객체를 가지고 대부분 데이터 조작을 한다고 보면, 스키마에 static을 이용해서 메소드 추가하는 게 훨씬 유용하다고 생각할 수 있다.
 // 여기까지 스키마에 static을 이용해서 메소드 추가하는 방법이다. // 조금 이따가 비밀번호를 암호화 해서 넣는 방법을 알아본다.
+
+
+// static 방식으로 스키마에 메소드를 정의하면, 모델이라는 객체에서 사용할 수 있다.
