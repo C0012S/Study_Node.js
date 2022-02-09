@@ -10,6 +10,11 @@ var expressSession = require('express-session');
 // 에러 핸들러 모듈 사용
 var expressErrorHandler = require('express-error-handler');
 
+
+// 암호화 모듈 // 암호화를 위한 가장 기본적인 기능이 외장 모듈로 만들어져 있다.
+var crypto = require('crypto'); // crypto : 암호화를 도와 주는 모듈
+
+
 // mongoose 모듈 사용
 var mongoose = require('mongoose');
 
@@ -28,22 +33,61 @@ function connectDB() {
         console.log('데이터베이스에 연결됨 : ' + databaseUrl);
         
         UserSchema = mongoose.Schema({
-            id: {type:String, required:true, unique:true}, // unique:true - id 값은 고유한 값으로 해서 반드시 들어가야 한다.
-            password: {type:String, required:true},
-            name: {type:String, index:'hashed'}, // index : name에 index를 추가함으로써 name으로 검색하겠다는 목적 // hashed 방식으로 index를 만든다.
+            id: {type:String, required:true, unique:true, 'default':''},
+            hashed_password: {type:String, required:true, 'default':''},
+            salt: {type:String, required:true},
+            name: {type:String, index:'hashed', 'default':''}, // default를 문자열이 아니라 그냥 default 속성으로 추가해도 상관없다.
             age: {type:Number, 'default':-1},
-            created_at: {type:Date, index:{unique:false}, 'default':Date.now()}, // Date.now : 현재 시간을 자동으로 생성해서 넣어 준다. // created_at을 값을 안 넣어도 자동으로 만들어 준다.
+            created_at: {type:Date, index:{unique:false}, 'default':Date.now()},
             updated_at: {type:Date, index:{unique:false}, 'default':Date.now()}
         });
         console.log('UserSchema 정의함.');
         
+        UserSchema
+            .virtual('password') // password 속성 사용 // 실제 데이터베이스에 저장되는 것은 아니다.
+            .set(function(password) {
+                // this._password = password // hashed_password를 써서 return 할 수 있으면 되는데, password라는 것을 그대로 get이라는 게 호출되었을 때 원래의 password를 그대로 던져 주겠다고 하면 _password를 추가할 수 있다. // 이것은 선택적인 것이다. // 단방향 암호화를 사용하는 경우, 원본 password를 남겨 둘 이유가 없다. // 이런 식으로 password를 저장해 뒀다가 다시 빼는 거는 실제로는 안 해도 상관없다. // get을 쓸 경우, get에 줄 게 없기 때문에 그런 게 되겠다. // get을 아예 빼고 password 저장 식을 빼도 된다.
+                this.salt = this.makeSalt();
+                this.hashed_password = this.encryptPassword(password); // encryptPassword 메소드 : 암호화를 하는 메소드
+                console.log('virtual password 저장됨 : ' + this.hashed_password);
+            })
+            // .get() // password를 저장하는 코드를 빼면 .get() 코드도 같이 뺄 수 있다.
+        
+        // method 함수를 사용하면 모델 인스턴스 객체에서 사용할 수 있다. // 위의 UserSchema에서 encryptPassword, makeSalt를 사용하고(정의되어) 있으므로 이를 모델 인스턴스 객체에서 쓸 수 있는 method로 추가해 본다. // method 함수 또는 method 객체의 속성으로 추가하면 된다.
+        UserSchema.method('encryptPassword', function(plainText, inSalt) {
+            if (inSalt) {
+                return crypto.createHmac('sha1', inSalt).update(plainText).digest('hex'); // sha1 : encrypt 방법 // sha1 알고리즘과 digest 알고리즘을 이용해서 암호화를 하겠다.  // crypto 암호화 모듈이 있고, 암호화하는 방법에서 sha1 알고리즘과 digest 알고리즘이 있다. 그것을 지금 구현하는 것이다.
+            }
+            else {
+                return crypto.createHmac('sha1', this.salt).update(plainText).digest('hex'); // salt 값에 무엇을 넣어 주든, 그게 일종의 시드 같은 역할을 한다. 이 값을 이용해서 이 값이 달라지면, 암호화 된 값도 달라지는 효과를 만들어 낸다.
+            }
+        }); // plainText : password 가상 속성으로 던져 준 값이다. // salt라는 값을 받으면 salt에 따라서 암호화 되는 값이 달라지게 만들기 위한 것이다.
+        
+        UserSchema.method('makeSalt', function() {
+            return Math.rount((new Date().valueOf() * Math.random())) + ''; // Math.round에 문자열로 변환하기 위해서 ''를 붙여 준다.
+        }); // makeSalt : 특정한 값을 랜덤하게 하나 만들어 내겠다는 것이다. 그래서 결국에는 매번 이 salt를 사용하게 되면, 매번 그 값이 새로운 값으로 만들어진다. // makeSalt를 하게 되면, salt가 계속 바뀌어서 만들어지므로 다른 값들이 계속 나오겠다는 것을 알 수 있다. // salt를 처음에 주지 않으면 makeSalt를 해서 전해 주면 그걸 가지고 처리할 것이고, DB에 저장된 salt를 가지고 사용하는 형태가 될 것이다.
+        
+        UserSchema.method('authenticate', function(plainText, inSalt, hashed_password) { // plainText, inSalt, hashed_password 값을 가지고 비교한다. // hashed_password : 암호화 되어서 저장된 값
+            if (inSalt) { // salt 값이 넘어온 경우
+                console.log('authenticate 호출됨.');
+                return this.encryptPassword(plainText, inSalt) === hashed_password // 암호화를 한 게 실제 데이터베이스에 저장된 hashed_password와 같은지를 비교한다.
+            }
+            else { // salt 값이 넘어오지 않은 경우 → 데이터베이스에 저장된 salt 값을 쓰겠다. 그러면 한 번 암호화 되어서 저장되면서 salt 값을 같이 넣은 경우, 그거를 가지고 비교할 수 있다.
+                console.log('authenticate 호출됨.');
+                return this.encryptPassword(plainText) === hashed_password;
+            }
+        });
+        // 이렇게 하면, method 함수를 이용해서 모델 인스턴스 객체에서 사용할 수 있는 함수들을 등록한 게 된다.
+        // id, name 값이 빈 경우가 있으면 문제가 생긴다. → pass 함수를 이용하고 validate 함수를 이용해서 값이 없는지, 있는지, 값의 유효성 검사 작업을 한다.
+        
+        
         UserSchema.static('findById', function(id, callback) {
-            return this.find({id:id}, callback); // this : UserSchema의 this // 실제로 쓰는 건 UserModel에서 사용이 된다.
-        }); // findById 이름으로 함수 등록하면 모델 객체에서 사용할 수 있다.
+            return this.find({id:id}, callback);
+        });
         
         /*
         UserSchema.statics.findById = function(id, callback) {
-            return this.find({id:id}, callback); // 함수를 호출한 객체가 this로 참조된다. // this가 UserSchema일 필요없다.
+            return this.find({id:id}, callback);
         }
         */ // 이런 형태로 사용할 수도 있다.
         
@@ -52,7 +96,7 @@ function connectDB() {
         });
         
         
-        UserModel = mongoose.model('users2', UserSchema); // 기존의 users 컬렉션의 스키마가 달라서 users2 컬렉션이 만들어지도록 변경
+        UserModel = mongoose.model('users2', UserSchema);
         console.log('UserModel 정의함.');
     });
     
@@ -230,7 +274,7 @@ var authUser = function(db, id, password, callback) {
         
         console.log('아이디 %s로 검색됨.');
         if (results.length > 0) {
-            if (results[0]._doc.password === password) {
+            if (results[0]._doc.password == password) {
                 console.log('비밀번호 일치함.');
                 callback(null, results);
             }
@@ -282,11 +326,3 @@ var server = http.createServer(app).listen(app.get('port'), function() {
     
     connectDB();
 });
-
-// 몽구스의 스키마를 정의하고 모델 객체에서 find, 조회, 업데이트, 삭제가 가능하다. // 이거를 실제 라우팅 함수에서 받으면 데이터베이스 조작하는 함수를 별도로 분리해서 처리를 많이 했다. // 스키마를 정의할 때 static으로 추가하면 별도의 데이터베이스 처리 함수 없이 라우팅 함수에서 바로 처리할 수 있어 좀 더 편리한 방법이 될 수 있다. // 자주 사용하는 데이터베이스 조작 함수 같은 경우 static으로 등록하면 좀 더 편리하게 사용할 수 있다.
-// static으로 정의한 것 말고, 모델 객체가 아니라 모델 인스턴스 객체에서 사용할 수 있는 방법도 있다. - 메소드로 추가하면 된다.
-// 모델 객체에서 사용하는 것만으로 웬만큼 처리는 된다. // 모델 객체를 가지고 대부분 데이터 조작을 한다고 보면, 스키마에 static을 이용해서 메소드 추가하는 게 훨씬 유용하다고 생각할 수 있다.
-// 여기까지 스키마에 static을 이용해서 메소드 추가하는 방법이다. // 조금 이따가 비밀번호를 암호화 해서 넣는 방법을 알아본다.
-
-
-// static 방식으로 스키마에 메소드를 정의하면, 모델이라는 객체에서 사용할 수 있다.
