@@ -11,7 +11,7 @@ var expressSession = require('express-session');
 var expressErrorHandler = require('express-error-handler');
 
 
-var mysql = require('mysql'); // mysql 외장 모듈
+var mysql = require('mysql'); // mysql 외장 모듈 // npm install mysql --save로 외장 모듈 설치
 
 // mysql의 connection, 데이터베이스 연결을 만들어서 할 수도 있는데, 실제로 실무에서 쓰려고 하면 풀링을 한다. 풀링은 연결을 계속 만들게 되면 만들고 닫고, 만들고 닫고, open 하고 다 쓰고 나면 close를 꼭 해 줘야 한다. 왜냐하면 connection 수는 리소스를 많이 사용하기 때문에 제한이 많다. 그래서 connection은 한정되어 있어 풀을 만들어서 그 풀 안에 10 개면 10 개만 넣어 놓는다. 내가 갖다 쓰고, 다시 풀에 넣어 주면 재사용이 된다. 성능 면에서도 좋고 여러 가지 장점이 있어 대부분 풀을 사용한다.
 var pool = mysql.createPool({
@@ -43,6 +43,42 @@ app.use(expressSession({
 
 
 var router = express.Router();
+
+
+router.route('/process/adduser').post(function(req, res) {
+    console.log('/process/adduser 라우팅 함수 호출됨.');
+    
+    var paramId = req.body.id || req.query.id;
+    var paramPassword = req.body.password || req.query.password;
+    var paramName = req.body.name || req.query.name;
+    var paramAge = req.body.age || req.query.age;
+    
+    console.log('요청 파라미터 : ' + paramId + ', ' + paramPassword + ', ' + paramName + ', ' + paramAge);
+    
+    addUser(paramId, paramName, paramAge, paramPassword, function(err, addedUser) {
+        if (err) {
+            console.log('에러 발생.');
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>에러 발생</h1>');
+            res.end();
+            return;
+        }
+        
+        if (addedUser) {
+            console.dir(addedUser);
+            
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>사용자 추가 성공</h1>');
+            res.end();
+        }
+        else {
+            console.log('에러 발생.');
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>사용자 추가 실패</h1>');
+            res.end();
+        }
+    });
+});
 
 
 router.route('/process/login').post(function(req, res) {
@@ -91,6 +127,37 @@ router.route('/process/login').post(function(req, res) {
 app.use('/', router);
 
 
+var addUser = function(id, name, age, password, callback) {
+    console.log('addUser 호출됨.');
+    
+    pool.getConnection(function(err, conn) { // conn : 연결 객체를 전달받는다. connection 객체다.
+        if (err) {
+            if (conn) {
+                conn.release(); // release : 해제. pool로 connection을 반납. // getConnection에서 conn을 가지고 왔는데, connection을 전부 다 사용했다고 하면 connection을 release 해 줘야 한다. 그렇지 않으면 pool에서 connection을 꺼내 왔는데 10 개밖에 없으므로 다시 돌려 주지 않으면 다른 데에서 이 pool에 있는 connection을 쓰려고 하는데 없는 상황이 발생해 문제가 생긴다. 그래서 항상 쓰고 나면 release를 해 줘야 한다.
+            }
+            
+            callback(err, null);
+            return;
+        }
+        console.log('데이터베이스 연결의 스레드 아이디 : ' + conn.threadId); // 어떤 connection이 나오는지 확인
+        
+        var data = {id:id, name:name, age:age, password:password};
+        var exec = conn.query('insert into users set ?', data, function(err, result) {
+            conn.release();
+            console.log('실행된 SQL : ' + exec.sql);
+            
+            if (err) {
+                console.log('SQL 실행 시 에러 발생');
+                callback(err, null);
+                return;
+            }
+            
+            callback(null, result);
+        }); // query 함수를 실행하면 결과 값도 return 된다. // return 된 값을 통해서 SQL 문이 어떻게 실행되었는지 확인할 수 있다.
+    }); // getConnection 함수를 실행하면 연결을 pool에서 하나 만들어서 가져온다. 기존에 있으면 재사용하게 된다. 즉, pool에서 하나 연결을 달라는 것이다.
+}; // 데이터베이스를 접근하는 함수 (MySQL에 접근)
+
+
 var authUser = function(db, id, password, callback) {
     console.log('authUser 호출됨 : ' + id + ', ' + password);
     
@@ -128,6 +195,4 @@ app.use(errorHandler);
 
 var server = http.createServer(app).listen(app.get('port'), function() { 
     console.log('익스프레스로 웹 서버를 실행함 : ' + app.get('port'));
-    
-    connectDB();
 });
