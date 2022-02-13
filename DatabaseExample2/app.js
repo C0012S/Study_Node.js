@@ -16,6 +16,27 @@ var expressSession = require('express-session');
 // 예외(Exception, Error) 처리를 위한 에러 핸들러 모듈 사용
 var expressErrorHandler = require('express-error-handler');
 
+// mongodb 모듈 사용
+var MongoClient = require('mongodb').MongoClient;
+
+var database;
+
+// connectDB : MongoDB
+function connectDB() {
+    var databaseUrl = 'mongodb://127.0.0.1:27017/local';
+    
+    MongoClient.connect(databaseUrl, function(err, client) {
+        if (err) {
+            console.log('데이터베이스 연결 시 에러 발생함.');
+            console.log(err); // 에러 출력
+            return;
+        }
+        
+        console.log('데이터베이스에 연결됨 : ' + databaseUrl);
+        database = client.db("local"); // 정상적으로 연결되었다면 database 변수에 파라미터로 전달받은 db 객체를 할당
+    });
+} // connectDB 메소드를 호출하면 MongoDB 쪽에 연결된다.
+
 var app = express();
 
 app.set('port', process.env.PORT || 3000);
@@ -37,6 +58,8 @@ var router = express.Router();
 
 app.use('/', router);
 
+// Node.js는 비동기 방식 선호 // 함수로 분리하면 깊이가 깊어지는 코드 형태가 단순해진다.
+
 // 404 에러 페이지 처리
 var errorHandler = expressErrorHandler({
     static: {
@@ -46,4 +69,6 @@ var errorHandler = expressErrorHandler({
 
 var server = http.createServer(app).listen(app.get('port'), function() {
     console.log('익스프레스로 웹 서버를 실행함 : ' + app.get('port'));
+    
+    connectDB(); // 데이터베이스 연결
 });

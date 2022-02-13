@@ -15,6 +15,7 @@
     "express-error-handler": "^1.1.0",
     "express-session": "^1.17.2",
     "http": "^0.0.1-security",
+    "mongodb": "^4.3.1",
     "path": "^0.12.7"
   }
 }
