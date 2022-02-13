@@ -56,9 +56,72 @@ app.use(expressSession({
 
 var router = express.Router();
 
+router.route('/process/login').post(function(req, res) {
+    console.log('/process/login 라우팅 함수 호출됨.');
+    
+    var paramId = req.body.id || req.query.id;
+    var paramPassword = req.body.password || req.query.password;
+    console.log('요청 파라미터 : ' + paramId + ', ' + paramPassword);
+    
+    if (database) { // database가 있다면
+        authUser(database, paramId, paramPassword, function(err, docs) {
+            if (err) {
+                console.log('에러 발생');
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>에러 발생</h1>');
+                res.end();
+                return;
+            }
+            
+            if (docs) {
+                console.dir(docs);
+                
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>사용자 로그인 성공</h1>');
+                res.write('<div><p>사용자 : ' + docs[0].name + '</p></div>');
+                res.write('<br><br><a href="/public/login.html">다시 로그인하기</a>')
+                res.end();
+            }
+            else {
+                console.log('에러 발생');
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>사용자 데이터 조회 안 됨.</h1>');
+                res.end();
+            }
+        });
+    }
+    else { // connect가 안 된 경우
+        console.log('에러 발생');
+        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+        res.write('<h1>데이터베이스 연결 안 됨.</h1>');
+        res.end();
+    }
+});
+
 app.use('/', router);
 
 // Node.js는 비동기 방식 선호 // 함수로 분리하면 깊이가 깊어지는 코드 형태가 단순해진다.
+var authUser = function(db, id, password, callback) {
+    console.log('authUser 호출됨. : ' + id + ', ' + password);
+    
+    var users = db.collection('users');
+    
+    users.find({"id":id, "password":password}).toArray(function(err, docs) { // docs : 결과 문서 객체 - 하나의 레코드와 같다.
+        if (err) {
+            callback(err, null); // 두 번째 파라미터는 정상일 경우 데이터를 넘기기 위한 목적
+            return;
+        }
+        
+        if (docs.length > 0) { // 문서 객체가 여러 개인 경우
+            console.log('일치하는 사용자를 찾음.');
+            callback(null, docs); // docs : 결과 값
+        }
+        else {
+            console.log('일치하는 사용자를 찾지 못함.');
+            callback(null, null); // 에러가 아니지만 docs의 내용이 없다.
+        }
+    }); // 검색한 결과를 찾아서 배열로 바꾼다.
+}; // 별도의 함수를 정의해 데이터베이스를 다룬다.
 
 // 404 에러 페이지 처리
 var errorHandler = expressErrorHandler({
