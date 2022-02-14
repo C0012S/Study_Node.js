@@ -167,11 +167,9 @@ app.use('/', router);
 var authUser = function(db, id, password, callback) {
     console.log('authUser 호출됨. : ' + id + ', ' + password);
     
-    var users = db.collection('users');
-    
-    users.find({"id":id, "password":password}).toArray(function(err, docs) { // docs : 결과 문서 객체 - 하나의 레코드와 같다.
+    UserModel.find({"id":id, "password":password}, function(err, docs) {
         if (err) {
-            callback(err, null); // 두 번째 파라미터는 정상일 경우 데이터를 넘기기 위한 목적
+            callback(err, null);
             return;
         }
         
@@ -183,30 +181,25 @@ var authUser = function(db, id, password, callback) {
             console.log('일치하는 사용자를 찾지 못함.');
             callback(null, null); // 에러가 아니지만 docs의 내용이 없다.
         }
-    }); // 검색한 결과를 찾아서 배열로 바꾼다.
+    }); // mongodb와 mongoose는 find로 검색하는 과정이 거의 똑같다. mongoose는 users collection을 참조하는 게 아니라 UserModel에서 find를 한다.
 }; // 별도의 함수를 정의해 데이터베이스를 다룬다.
 
 var addUser = function(db, id, password, name, callback) {
     console.log('addUser 호출됨. : ' + id + ', ' + password + ', ' + name);
     
-    var users = db.collection('users'); // users collection 참조
+    var user = new UserModel({"id":id, "password":password, "name":name}); // 객체 생성 방식을 이용 // new 사용 : UserModel이 프로토타입으로 동작 // 한 명의 user 정보를 가진 객체를 만든 것이다.
     
-    users.insertMany([{"id":id, "password":password, "name":name}], function(err, result) {
+    user.save(function(err) {
         if (err) {
             callback(err, null);
             return;
         }
         
-        if (result.insertedCount > 0) {
-            console.log('사용자 추가됨. : ' + result.insertedCount);
-            callback(null, result);
-        }
-        else {
-            console.log('추가된 레코드가 없음.'); // = 문서 객체가 없다.
-            callback(null, null);
-        }
-    });
+        console.log('사용자 데이터 추가함.');
+        callback(null, user);
+    }); // 위에서 만든 정보를 그대로 저장 // 저장이 정상적으로 되었는지는 callback 함수로 받을 수 있다.
 };
+// authUser, addUser 수정 = 데이터베이스 접근하는 코드 변경
 
 // 404 에러 페이지 처리
 var errorHandler = expressErrorHandler({
@@ -223,3 +216,10 @@ var server = http.createServer(app).listen(app.get('port'), function() {
 
 // Robomongo 다운로드 및 설치 - 데이터를 UI로 보여 준다.
 // Document를 수정할 수도 있고, 테이블 형태와 텍스트 형태로 볼 수도 있고, 로그를 볼 수도 있다.
+
+
+// UserSchema와 UserModel을 사용 // UserSchema는 테이블을 정의하는 것과 비슷하다. // UserModel에서 데이터를 조작한다. // 새로운 객체를 추가할 때는 new UserModel로 해서 새로운 객체를 만든 다음에 그거로 save를 한다. 
+// UserModel에 find를 하는 것과 좀 다르긴 하지만 이런 방법들을 사용하는 게 mongoose다.
+// mongodb 모듈을 사용하면 그 안에 객체가 다양한 형태로 들어갈 수 있다. 그것도 document 문서 객체 안에 들어가는 데이터의 속성을 정해 놓고 쓰면 문제는 없다.
+// mongoose가 여러 가지 다양한 다른 기능을 추가해서 제공할 수 있으니까 mongoose를 쓰는 것도 나쁘지 않다.
+// 추가로 더 Schema를 만들 때, 인덱스를 정의하거나 또는 메소드를 정의해서 편리하게 사용하는 방법을 볼 것이다.
