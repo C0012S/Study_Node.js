@@ -202,3 +202,6 @@ var server = http.createServer(app).listen(app.get('port'), function() {
     
     connectDB(); // 데이터베이스 연결
 });
+
+// Robomongo 다운로드 및 설치 - 데이터를 UI로 보여 준다.
+// Document를 수정할 수도 있고, 테이블 형태와 텍스트 형태로 볼 수도 있고, 로그를 볼 수도 있다.
