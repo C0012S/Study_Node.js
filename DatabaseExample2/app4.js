@@ -46,11 +46,17 @@ function connectDB() {
         });
         console.log('UserSchema 정의함.');
         
-        UserSchema.static('findById', function(id, callback) {
+        UserSchema.static('findById', function(id, callback) { // findById 함수 등록 // 모델 객체에서 이 메소드 사용 가능
             return this.find({id:id}, callback); // UserScehma의 this. 실제로는 UserModel에서 사용된다.
         });
         
-        UserSchema.static('findAll', function(callback) {
+        /* 이렇게 사용할 수도 있다.
+        UserSchema.statics.findById = function(id, callback) {
+            return this.find({id:id}, callback); // this : 내부적으로 모델 객체를 참조한다고 볼 수 있다.
+        }
+        */
+        
+        UserSchema.static('findAll', function(callback) { // findAll 함수 등록 // 모델 객체에서 이 메소드 사용 가능
             return this.find({}, callback);
         });
         
@@ -163,7 +169,6 @@ router.route('/process/adduser').post(function(req, res) {
             }
         });
     }
-    
     else {
         console.log('에러 발생');
         res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
@@ -172,11 +177,79 @@ router.route('/process/adduser').post(function(req, res) {
     }
 }); // POST 방식으로 처리
 
+router.route('/process/listuser').post(function(req, res) {
+    console.log('/process/listuser 라우팅 함수 호출됨.');
+    
+    if (database) {
+        UserModel.findAll(function(err, results) {
+            if (err) {
+                console.log('에러 발생');
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>에러 발생</h1>');
+                res.end();
+                return;
+            }
+            
+            if (results) {
+                console.dir(results);
+                
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write("<h3>사용자 리스트</h3>");
+                res.write("<div><ul>");
+                
+                for (var i = 0; i < results.length; i++) {
+                    var curId = results[i]._doc.id;
+                    var curName = results[i]._doc.name;
+                    res.write("    <li>#" + i + " -> " + curId + ", " + curName + "</li>");
+                }
+                
+                res.write("</ul></div>");
+                res.end();
+            }
+            else {
+                console.log('에러 발생');
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                res.write('<h1>조회된 사용자 없음.</h1>');
+                res.end();
+            }
+        });
+    }
+    else {
+        console.log('에러 발생');
+        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+        res.write('<h1>데이터베이스 연결 안 됨.</h1>');
+        res.end();
+    }
+});
+
 app.use('/', router);
 
 // Node.js는 비동기 방식 선호 // 함수로 분리하면 깊이가 깊어지는 코드 형태가 단순해진다.
 var authUser = function(db, id, password, callback) {
     console.log('authUser 호출됨. : ' + id + ', ' + password);
+    
+    UserModel.findById(id, function(err, results) {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        
+        console.log('아이디 %s로 검색됨.');
+        if (results.length > 0) {
+            if (results[0]._doc.password === password) {
+                console.log('비밀번호 일치함.');
+                callback(null, results);
+            }
+            else {
+                console.log('비밀번호 일치하지 않음.');
+                callback(null, null);
+            }
+        }
+        else { // 아이디를 못 찾는 경우
+            console.log('아이디 일치하는 사용자 없음.');
+            callback(null, null);
+        }
+    })
     
     UserModel.find({"id":id, "password":password}, function(err, docs) {
         if (err) {
@@ -234,3 +307,11 @@ var server = http.createServer(app).listen(app.get('port'), function() {
 // mongodb 모듈을 사용하면 그 안에 객체가 다양한 형태로 들어갈 수 있다. 그것도 document 문서 객체 안에 들어가는 데이터의 속성을 정해 놓고 쓰면 문제는 없다.
 // mongoose가 여러 가지 다양한 다른 기능을 추가해서 제공할 수 있으니까 mongoose를 쓰는 것도 나쁘지 않다.
 // 추가로 더 Schema를 만들 때, 인덱스를 정의하거나 또는 메소드를 정의해서 편리하게 사용하는 방법을 볼 것이다.
+
+
+// ch06-10
+// 몽구스의 스키마 정의 // 모델 객체에서 find, 조회, 저장, update, 수정, 삭제가 가능하다.
+// 그거를 실제 라우팅 함수에서 받으면, 데이터베이스 조작하는 함수를 별도로 분리해서 처리를 많이 했다. // 근데 그거를 static이라는 것으로 Schema를 정의할 때 추가하면 별도의 데이터베이스 처리하는 함수 없이 라우팅 함수에서 바로 처리할 수 있다. // 그래서 자주 사용하는 데이터베이스 조작 함수 같은 경우 static으로 등록하면 편리하게 사용할 수 있다.
+// static으로 정의한 것 말고, 모델 인스턴스 객체에서 사용할 수 있는 방법도 있다. 메소드로 추가하면 된다.
+// 모델 객체를 가지고 대부분 데이터 조작을 한다면, Schema에 static을 이용해서 메소드를 추가하는 게 훨씬 유용하다.
+// Schema에 static으로 메소드 추가하는 방법을 봤다.
