@@ -249,23 +249,7 @@ var authUser = function(db, id, password, callback) {
             console.log('아이디 일치하는 사용자 없음.');
             callback(null, null);
         }
-    })
-    
-    UserModel.find({"id":id, "password":password}, function(err, docs) {
-        if (err) {
-            callback(err, null);
-            return;
-        }
-        
-        if (docs.length > 0) { // 문서 객체가 여러 개인 경우
-            console.log('일치하는 사용자를 찾음.');
-            callback(null, docs); // docs : 결과 값
-        }
-        else {
-            console.log('일치하는 사용자를 찾지 못함.');
-            callback(null, null); // 에러가 아니지만 docs의 내용이 없다.
-        }
-    }); // mongodb와 mongoose는 find로 검색하는 과정이 거의 똑같다. mongoose는 users collection을 참조하는 게 아니라 UserModel에서 find를 한다.
+    });
 }; // 별도의 함수를 정의해 데이터베이스를 다룬다.
 
 var addUser = function(db, id, password, name, callback) {
