@@ -50,7 +50,8 @@ router.route('/process/adduser').post(function(req, res) {
     
     console.log('요청 파라미터 : ' + paramId + ', ' + paramPassword + ', ' + paramName + ', ' + paramAge);
     
-    addUser(paramId, paramName, paramAge, paramPassword, function(err, addedUser) {
+    var age = Number(paramAge); // 자료형 변경
+    addUser(paramId, paramName, age, paramPassword, function(err, addedUser) {
         if (err) {
             console.log('에러 발생');
             res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
@@ -82,39 +83,31 @@ router.route('/process/login').post(function(req, res) {
     var paramPassword = req.body.password || req.query.password;
     console.log('요청 파라미터 : ' + paramId + ', ' + paramPassword);
     
-    if (database) {
-        authUser(database, paramId, paramPassword, function(err, docs) {
-            if (err) {
-                console.log('에러 발생');
-                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
-                res.write('<h1>에러 발생</h1>');
-                res.end();
-                return;
-            }
-            
-            if (docs) {
-                console.dir(docs);
-                
-                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
-                res.write('<h1>사용자 로그인 성공</h1>');
-                res.write('<div><p>사용자 : ' + docs[0].name + '</p></div>');
-                res.write('<br><br><a href="/public/login.html">다시 로그인하기</a>')
-                res.end();
-            }
-            else {
-                console.log('에러 발생');
-                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
-                res.write('<h1>사용자 데이터 조회 안 됨.</h1>');
-                res.end();
-            }
-        });
-    }
-    else {
-        console.log('에러 발생');
-        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
-        res.write('<h1>데이터베이스 연결 안 됨.</h1>');
-        res.end();
-    }
+    authUser(paramId, paramPassword, function(err, rows) {
+        if (err) {
+            console.log('에러 발생');
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>에러 발생</h1>');
+            res.end();
+            return;
+        }
+
+        if (rows) {
+            console.dir(rows);
+
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>사용자 로그인 성공</h1>');
+            res.write('<div><p>사용자 : ' + rows[0].name + '</p></div>');
+            res.write('<br><br><a href="/public/login.html">다시 로그인하기</a>')
+            res.end();
+        }
+        else {
+            console.log('에러 발생');
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>사용자 데이터 조회 안 됨.</h1>');
+            res.end();
+        }
+    });
 });
 
 app.use('/', router);
@@ -150,25 +143,41 @@ var addUser = function(id, name, age, password, callback) {
     }); // getConnection : 연결을 pool에서 하나 만들어 가져오거나 기존의 것을 재사용한다.
 };
 
-var authUser = function(db, id, password, callback) {
+var authUser = function(id, password, callback) {
     console.log('authUser 호출됨. : ' + id + ', ' + password);
     
-    var users = db.collection('users');
-    
-    users.find({"id":id, "password":password}).toArray(function(err, docs) {
+    pool.getConnection(function(err, conn) { // 정상적으로 됐을 때 conn이 된다.
         if (err) {
+            if (conn) {
+                conn.release();
+            }
+            
             callback(err, null);
             return;
         }
         
-        if (docs.length > 0) {
-            console.log('일치하는 사용자를 찾음.');
-            callback(null, docs);
-        }
-        else {
-            console.log('일치하는 사용자를 찾지 못함.');
-            callback(null, null);
-        }
+        console.log('데이터베이스 연결 스레드 아이디 : ' + conn.threadId);
+        
+        var tablename = 'users';
+        var columns = ['id', 'name', 'age'];
+        var exec = conn.query("select ?? from ?? where id = ? and password = ?", [columns, tablename, id, password], function(err, rows) {
+            conn.release();
+            console.log('실행된 SQL : ' + exec.sql);
+            
+            if (err) {
+                callback(err, null);
+                return;
+            }
+            
+            if (rows.length > 0) { // rows.length가 0보다 크면 찾은 것이다.
+                console.log('사용자 찾음.');
+                callback(null, rows);
+            }
+            else {
+                console.log('사용자 찾지 못함.');
+                callback(null, null);
+            }
+        }); // 배열은 물음표를 차례대로 대체한다.
     });
 };
 
@@ -178,6 +187,9 @@ var errorHandler = expressErrorHandler({
         '404': './public/404.html'
     }
 });
+
+app.use(expressErrorHandler.httpError(404));
+app.use(errorHandler);
 
 var server = http.createServer(app).listen(app.get('port'), function() {
     console.log('익스프레스로 웹 서버를 실행함 : ' + app.get('port'));
