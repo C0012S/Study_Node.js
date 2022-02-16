@@ -101,7 +101,7 @@ function connectDB() {
             return this.find({}, callback);
         });
         
-        UserModel = mongoose.model('users2', UserSchema);
+        UserModel = mongoose.model('users3', UserSchema);
         console.log('UserModel 정의함.'); // 객체를 생성했다는 얘기
     }); // open 이벤트 발생했을 때 연결된다.
     
@@ -277,7 +277,10 @@ var authUser = function(db, id, password, callback) {
         
         console.log('아이디 %s로 검색됨.');
         if (results.length > 0) {
-            if (results[0]._doc.password === password) {
+            var user = new UserModel({id:id});
+            var authenticated = user.authenticate(password, results[0]._doc.salt, results[0]._doc.hashed_password); // authenticated : 인증되었는지 True, False
+            
+            if (authenticated) {
                 console.log('비밀번호 일치함.');
                 callback(null, results);
             }
@@ -296,7 +299,7 @@ var authUser = function(db, id, password, callback) {
 var addUser = function(db, id, password, name, callback) {
     console.log('addUser 호출됨. : ' + id + ', ' + password + ', ' + name);
     
-    var user = new UserModel({"id":id, "password":password, "name":name}); // 객체 생성 방식을 이용 // new 사용 : UserModel이 프로토타입으로 동작 // 한 명의 user 정보를 가진 객체를 만든 것이다.
+    var user = new UserModel({"id":id, "password":password, "name":name}); // 객체 생성 방식을 이용 // new 사용 : UserModel이 프로토타입으로 동작 // 한 명의 user 정보를 가진 객체를 만든 것이다.  // password가 가상 속성으로 추가되어 있기 때문에 그대로 사용할 수 있다.
     
     user.save(function(err) {
         if (err) {
