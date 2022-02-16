@@ -40,6 +40,41 @@ app.use(expressSession({
 
 var router = express.Router();
 
+router.route('/process/adduser').post(function(req, res) {
+    console.log('/process/adduser 라우팅 함수 호출됨.');
+    
+    var paramId = req.body.id || req.query.id;
+    var paramPassword = req.body.password || req.query.password;
+    var paramName = req.body.name || req.query.name;
+    var paramAge = req.body.age || req.query.age;
+    
+    console.log('요청 파라미터 : ' + paramId + ', ' + paramPassword + ', ' + paramName + ', ' + paramAge);
+    
+    addUser(paramId, paramName, paramAge, paramPassword, function(err, addedUser) {
+        if (err) {
+            console.log('에러 발생');
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>에러 발생</h1>');
+            res.end();
+            return;
+        }
+        
+        if (addedUser) {
+            console.dir(addedUser);
+            
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>사용자 추가 성공</h1>');
+            res.end();
+        }
+        else {
+            console.log('에러 발생');
+            res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+            res.write('<h1>사용자 추가 실패.</h1>');
+            res.end();
+        }
+    });
+});
+
 router.route('/process/login').post(function(req, res) {
     console.log('/process/login 라우팅 함수 호출됨.');
     
@@ -84,6 +119,37 @@ router.route('/process/login').post(function(req, res) {
 
 app.use('/', router);
 
+var addUser = function(id, name, age, password, callback) {
+    console.log('addUser 호출됨.');
+    
+    // 데이터베이스(MySQL)를 접근하는 함수
+    pool.getConnection(function(err, conn) {
+        if (err) {
+            if (conn) {
+                conn.release(); // pool로 connection 반납한다.
+            }
+            callback(err, null);
+            return;
+        }
+        
+        console.log('데이터베이스 연결의 스레드 아이디 : ' + conn.threadId);
+        
+        var data = {id:id, name:name, age:age, password:password};
+        var exec = conn.query('insert into users set ?', data, function(err, result) {
+            conn.release();
+            console.log('실행된 SQL : ' + exec.sql);
+            
+            if (err) {
+                console.log('SQL 실행 시 에러 발생.');
+                callback(err, null);
+                return;
+            }
+            
+            callback(null, result);
+        }); // data : SQL 문에 대체된다.
+    }); // getConnection : 연결을 pool에서 하나 만들어 가져오거나 기존의 것을 재사용한다.
+};
+
 var authUser = function(db, id, password, callback) {
     console.log('authUser 호출됨. : ' + id + ', ' + password);
     
@@ -115,6 +181,4 @@ var errorHandler = expressErrorHandler({
 
 var server = http.createServer(app).listen(app.get('port'), function() {
     console.log('익스프레스로 웹 서버를 실행함 : ' + app.get('port'));
-    
-    connectDB();
 });
