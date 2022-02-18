@@ -31,70 +31,11 @@ function connectDB() {
     mongoose.connect(databaseUrl);
     database = mongoose.connection;
     
+    // 이 부분이 모듈 파일에 정의한 코드를 호출하는 것으로 변경되어야 한다. // 그러면 그 모듈을 위에서 읽어온 다음에 여기서 호출해도 되고, 아니면 이 부분에 해당하는 저 모듈 파일을 불러와서 처리하는 부분을 별도의 함수로 분리해 볼 수도 있다. → 별도의 함수로 분리해 본다.
     database.on('open', function() {
         console.log('데이터베이스에 연결됨 : ' + databaseUrl);
         
-        UserSchema = mongoose.Schema({
-            id: {type:String, required:true, unique:true, 'default':''},
-            hashed_password: {type:String, required:true, 'default':''},
-            salt: {type:String, required:true},
-            name: {type:String, index:'hashed', 'default':''},
-            age: {type:Number, 'default':-1},
-            created_at: {type:Date, index:{unique:false}, 'default':Date.now()},
-            updated_at: {type:Date, index:{unique:false}, 'default':Date.now()}
-        });
-        console.log('UserSchema 정의함.');
-        
-        UserSchema
-            .virtual('password')
-            .set(function(password) {
-                this.salt = this.makeSalt();
-                this.hashed_password = this.encryptPassword(password);
-                console.log('virtual password 저장됨 : ' + this.hashed_password);
-            })
-        
-        UserSchema.method('encryptPassword', function(plainText, inSalt) {
-            if (inSalt) {
-                return crypto.createHmac('sha1', inSalt).update(plainText).digest('hex');
-            }
-            else {
-                return crypto.createHmac('sha1', this.salt).update(plainText).digest('hex');
-            }
-        });
-        
-        UserSchema.method('makeSalt', function() {
-            return Math.round((new Date().valueOf() * Math.random())) + '';
-        });
-        
-        UserSchema.method('authenticate', function(plainText, inSalt, hashed_password) {
-            if (inSalt) {
-                console.log('authenticate 호출됨.');
-                return this.encryptPassword(plainText, inSalt) === hashed_password
-            }
-            else {
-                console.log('authenticate 호출됨.');
-                return this.encryptPassword(plainText) === hashed_password;
-            }
-        });
-        
-        
-        UserSchema.static('findById', function(id, callback) {
-            return this.find({id:id}, callback);
-        });
-        
-        /*
-        UserSchema.statics.findById = function(id, callback) {
-            return this.find({id:id}, callback);
-        }
-        */ // 이런 형태로 사용할 수도 있다.
-        
-        UserSchema.static('findAll', function(callback) {
-            return this.find({}, callback);
-        });
-        
-        
-        UserModel = mongoose.model('users3', UserSchema);
-        console.log('UserModel 정의함.');
+        createUserSchema(database); // 데이터베이스가 open된 상태가 되면 그때 createUserSchema 함수를 호출해 준다.
     });
     
     database.on('disconnected', function() {
@@ -103,6 +44,24 @@ function connectDB() {
     
     database.on('error', console.error.bind(console, 'mongoose 연결 에러.'));
 }
+
+
+// 함수로 정의
+function createUserSchema(database) {
+/*
+    var user_schema = require('./database/user_schema'); // 모듈 파일을 읽어온다.
+    var UserSchema = user_schema.createSchema(); // createSchema 함수를 호출하게 되면 UserSchema라는 스키마 객체가 만들어진다. 그거를 UserSchema 변수를 만들어서 할당할 수 있다.
+*/
+/*    
+    // 줄여서 표현할 수 있다.
+    var UserSchema = require('./database/user_schema').createSchema(mongoose); // require로 불러온 모듈이 결국 객체를 return 하게 되는데, 그거 .createSchema 함수를 바로 이어서 호출하는 것이다. // 여기에 mongoose 객체를 파라미터로 전달할 수 있다. // 그리고 UserSchema로 바로 return 받아서 할당할 수 있다. // UserSchema를 만든 다음에, 필요한 다른 모듈로 전달해 줘야 하는 경우도 있다. 그러다 보니까 이거를 UserSchema 변수로 별도로 만들지 말고, 파라미터로 전달받은 database에 속성으로 넣을 수 있다.
+*/
+    database.UserSchema = require('./database/user_schema').createSchema(mongoose); // 이게 결국에는 모듈로 정의한 user_schema를 불러와서 UserSchema 생성하는 코드를 불러와서 UserSchema 객체를 만든 다음에 database 안에 넣어 주는 방법이다.
+    
+    database.UserModel = mongoose.model('users3', database.UserSchema); // database 객체의 속성으로 할당해 준다.
+    console.log('UserModel 정의함.');
+}
+// 데이터베이스 관련된 부분을 별도의 모듈 파일로 옮겼고, 별도의 모듈 파일로 분리시켰고, 분리된 모듈 파일을 require로 불러와서 UserSchema 객체가 그대로 생성되고, 그 다음에 UserModel 만드는 코드를 createUserSchema 함수로 분리시켰으므로 connectDB의 open에서는 그 함수만 호출하면 된다. // 그러면 app.js 자체는 코드 양이 더 줄었다. // 그 다음에 만약 데이터베이스 관련된 스키마 변경을 하고 싶다면, user_schema.js에 와서 변경하기 때문에 app.js는 수정될 일이 없다. // 이게 나중에 가면 훨씬 많은 장점을 가지게 된다. // 여기서 createUserSchema의 require 부분은 이 코드의 맨 위로 올려 줄 수도 있다. 어떻게 하는지에 따라서 조금씩 달라질 것이다. // 이렇게 해서 데이터베이스 부분을 한 번 분리해 봤다. // 조금 이따가 라우팅 함수 부분을 분리해 보도록 하겠다.
 
 
 var app = express();
