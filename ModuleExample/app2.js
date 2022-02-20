@@ -21,6 +21,8 @@ var user = require('./routes/user');
 var config = require('./config'); // config.js 파일에 있는 설정 객체가 그대로 이 config 변수에 할당된다.
 // config 안에 server_port가 있었다. 그 서버 포트 정보를 이용해서 웹 서버를 실행하도록 만들어 볼 수 있다.
 
+var database_loader = require('./database/database_loader'); // 이 database_loader를 이용해서 그 폴더 안에 들어가 있는 데이터베이스 스키마들을 전부 다 로딩하고 싶다고 하면, 데이터베이스를 이용해서 로딩하는 포즈를 넣어 줘야 되겠다. 코드만 더 추가하면 될 것 같다. // 그러면 그 코드는 어디에 넣어야 되냐면, 밑으로 가보면 connectDB()라는 걸 썼는데, 이게 아니라 database, 책에 있는 대로 하면 database가 될 거고, 아니면 지금 약간 변형시켜서 하고 있으므로 database_loader.init으로 하고 여기에 app 객체와 config 객체를 파라미터로 전달해 주면 된다. // 이렇게 하면 데이터베이스 과정이 훨씬 단순해졌다는 걸 알 수가 있다.
+
 
 // 암호화 모듈
 var crypto = require('crypto');
@@ -53,6 +55,8 @@ app.use(expressSession({
 }));
 
 
+/* connectDB는 삭제해 줄 수 있는 상태가 된다.
+// 데이터베이스 관련된 작업 - connectDB // 이 부분 안을 보면, mongoose를 사용한다. Promise, mongoose.connect를 하고, database를 객체로 만들어서 할당하고 있다.
 function connectDB() {
     // var databaseUrl = 'mongodb://127.0.0.1:27017/local'; // config 모듈을 불러오면, config 객체가 반환되고, 그 다음에 그거를 config 변수를 만들어서 할당했는데, 그걸 이용해서 데이터베이스 연결을 위한 url로 사용할 수 있다고 생각하면 된다.
     
@@ -83,6 +87,8 @@ function createUserSchema(database) {
     database.UserModel = mongoose.model('users3', database.UserSchema);
     console.log('UserModel 정의함.');
 }
+*/
+// 여기까지 해서 데이터베이스 관련된 거를, 스키마를 각각의 모듈로 분리했다. 그거를 database_loader에서 한 번에 로딩하는 방법을 봤다. 로딩할 스키마 파일을 어떻게 설정하냐면 config.js 안에 db_schemas 배열 안에 이렇게 정의를 해서 이것들만 로딩하도록 할 수 있다는 걸 같이 봤다. // 잠깐 이따가 이제 라우팅 함수를 어떻게 분리하는지 같이 보도록 하겠다.
 
 
 var router = express.Router();
@@ -113,5 +119,5 @@ app.use(errorHandler);
 var server = http.createServer(app).listen(app.get('port'), function() { 
     console.log('익스프레스로 웹 서버를 실행함 : ' + app.get('port'));
     
-    connectDB();
+    database_loader.init(app, config);
 });
