@@ -22,18 +22,21 @@ var config = require('./config'); // config.js 파일에 있는 설정 객체가
 // config 안에 server_port가 있었다. 그 서버 포트 정보를 이용해서 웹 서버를 실행하도록 만들어 볼 수 있다.
 
 var database_loader = require('./database/database_loader'); // 이 database_loader를 이용해서 그 폴더 안에 들어가 있는 데이터베이스 스키마들을 전부 다 로딩하고 싶다고 하면, 데이터베이스를 이용해서 로딩하는 포즈를 넣어 줘야 되겠다. 코드만 더 추가하면 될 것 같다. // 그러면 그 코드는 어디에 넣어야 되냐면, 밑으로 가보면 connectDB()라는 걸 썼는데, 이게 아니라 database, 책에 있는 대로 하면 database가 될 거고, 아니면 지금 약간 변형시켜서 하고 있으므로 database_loader.init으로 하고 여기에 app 객체와 config 객체를 파라미터로 전달해 주면 된다. // 이렇게 하면 데이터베이스 과정이 훨씬 단순해졌다는 걸 알 수가 있다.
+var route_loader = require('./routes/route_loader'); // route_loader 모듈을 로딩한다.
 
 
 // 암호화 모듈
 var crypto = require('crypto');
 
 
+/* 필요없는 코드라 삭제한다.
 // mongoose 모듈 사용
 var mongoose = require('mongoose');
 
 var database;
 var UserSchema;
 var UserModel;
+*/
 
 
 var app = express();
@@ -91,7 +94,9 @@ function createUserSchema(database) {
 // 여기까지 해서 데이터베이스 관련된 거를, 스키마를 각각의 모듈로 분리했다. 그거를 database_loader에서 한 번에 로딩하는 방법을 봤다. 로딩할 스키마 파일을 어떻게 설정하냐면 config.js 안에 db_schemas 배열 안에 이렇게 정의를 해서 이것들만 로딩하도록 할 수 있다는 걸 같이 봤다. // 잠깐 이따가 이제 라우팅 함수를 어떻게 분리하는지 같이 보도록 하겠다.
 
 
-var router = express.Router();
+route_loader.init(app, express.Router()); // init 함수를 호출하고 app, router 객체를 넘겨 준다.
+/* 위의 코드로 이 코드는 필요없어졌다.
+var router = express.Router(); // 라우팅 함수를 처리하는 것이다. // express.Router를 이용해서 객체를 참조했다.
 
 
 router.route('/process/login').post(user.login);
@@ -102,6 +107,7 @@ router.route('/process/listuser').post(user.listuser);
 
 
 app.use('/', router);
+*/
 
 
 // 404 에러 페이지 처리
@@ -121,3 +127,7 @@ var server = http.createServer(app).listen(app.get('port'), function() {
     
     database_loader.init(app, config);
 });
+
+// 이번 장에서 처음에 데이터베이스 이전 장, 그 데이터베이스 쪽에서 만들었던 app.js 파일을 복사해서 만들었다. 복사해서 만든 다음에 모듈로 다 분리하니까 엄청 간단해졌다. require를 쓰는 코드 부분을 제외하면 나머지는 상당히 간단해진 것을 알 수 있다. // 이게 모듈화의 장점이 된다. 심지어는 여기서 app라고 하는 이 express 객체를 설정하는 이것도 별도의 모듈로 분리할 수 있다. 이렇게 되면 각각의 것들이 이제 모듈로 다 분리되었으니까 필요할 때 어떤 모듈을 수정하는지만 이해하고 있으면 훨씬 구조가 간단해 보일 것이다. // 이렇게 해서 라우팅 함수를 모듈 파일로 분리해서 메인 파일, app2.js와 같은 메인 파일에서 require로 로딩하거나 사용하거나, 이 방법을 같이 한 번 봤다. // 여기까지 바꾸고 나면 이제 어떤 장점이 생기냐면, 만약에 라우팅 함수를 추가하고 싶다면 user.js라는 데에 함수를 추가로 하나 더 넣고 그 다음에 config.js에서 route_info 안에 (속성,) 배열 안에 객체 하나를 더 추가하면 된다. 그리고 user.js가 아니라 만약에 메모를 만들겠다면 memo.js 파일을 만들고 마찬가지로 config.js에 등록하면 app2.js는 전혀 수정할 필요가 없다. 그냥 라우팅 함수를 새로 만들거나 삭제하거나 하는 것을 설정과 그 모듈 파일에서 해 놓기만 하면 이 웹 서버를 실행했을 때 그대로 실행이 된다는 것이다. 그런 장점이 생긴다. // 이런 내용들, 이렇게 바꿔가는 과정을 해 봤으므로 이제 나중에는 이렇게 이미 ModuleExample에서처럼 이렇게 이미 라우팅 함수는 모듈로 분리되어 있고, 데이터베이스 관련된 스키마를 생성하는 함수도 분리되어 있는 이 구조를 사용하게 될 것이다. 그래서 나중에 게시판을 만들든, 메모를 만들든, 또는 회사에서 어떤 특정한 웹 서버를 Node.js로 만들든 그때는 이렇게 모듈 파일로 분리된 구조를 사용할 것이다. // 여기까지 해서 모듈화 하는 과정을 같이 한 번 해 봤다.
+// 여기서 모듈화를 하는 건, 이전 장 데이터베이스에서 했던 것을 그대로 가지고 와서 모듈화 하는 작업을 하는 것이다. 그래서 데이터베이스 부분부터 해서 또는 그 이전 부분부터 해서 순서대로 와야 한다. 그래야 좀 더 잘 이해할 수 있다. 순서대로 오지 않고 이 부분만 보게 되면 모듈에 대한 기본 개념 이해하는 건 이해가 되겠지만, app.js를 만들거나 여기서 database_loader, route_loader, 이런 것들 만드는 이런 과정은 좀 더 어렵게 느낄 수 있다. 그래서 되도록이면 이 책은 순서대로 보기를 권장한다.
+// 이제 웹 페이지에서 UI를 좀 더 예쁘게 꾸미는 그런 과정을 보도록 할 것이다.

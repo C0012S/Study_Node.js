@@ -1,5 +1,7 @@
 // 데이터베이스 스키마를 로딩하는 별도의 파일이다.
 
+var mongoose = require('mongoose');
+
 var database = {};
 
 database.init = function(app, config) {
@@ -16,7 +18,8 @@ function connect(app, config) {
     database.db = mongoose.connection; // 위에 database 동일한 이름을 지정했으니까 database.db 쪽으로 할당되도록 바꿔 본다.
     
     database.db.on('open', function() {
-        console.log('데이터베이스에 연결됨 : ' + databaseUrl);
+        // console.log('데이터베이스에 연결됨 : ' + databaseUrl);
+        console.log('데이터베이스에 연결됨 : ' + config.db_url); // 오류로 인해 변경
         
         createSchema(app, config); // createUserSchema(database) - UserSchema 말고 모든 스키마, 정의된 거를 다 사용해 보겠다고 하면 createSchema로 바꾸고, 파라미터로 app, config를 전달해 준다. // 그러면 밑에 createSchema가 함수로 만들어질 수 있다. // createSchema 함수에서는 config 설정 파일에 정의된 db_schemas라고 넣어 둔 게 있는데 이 정보를 이용해서 스키마를 로딩하도록 할 것이다.
     });

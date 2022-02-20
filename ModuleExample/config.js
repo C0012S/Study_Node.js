@@ -14,6 +14,14 @@ module.exports = {
     db_schemas: [
         // 우리가 만든 user schema 정보를 넣을 텐데, 그러면 여러 개의 정보가 필요할 것이다.
         {file:'./user_schema', collection:'users3', schemaName:'UserSchema', modelName:'UserModel'} // user_schema가 database 폴더 안에 정의되어 있다. 이거는 require로 불러들일 그 정보를 지정한 것이다. // collection은 스키마를 정의하고 나서 모델 객체를 만들 때 collection을 지정한다. //schemaName 속성 - 속성 이름을 마음대로 정할 수 있다. 여기서 정한 거는 데이터베이스 스키마를 로딩하는 그 파일에서 이 속성 이름 그대로 사용해야 한다. UserSchema 이름으로 스키마를 만들었다.
-    ] // 데이터베이스 스키마 파일이 여러 개일 수 있으므로 배열로 한 번 정의해 본다.
+    ], // 데이터베이스 스키마 파일이 여러 개일 수 있으므로 배열로 한 번 정의해 본다.
+    route_info: [
+        {file:'./user', path:'/process/login', method:'login', type:'post'}, // routes 폴더 안의 user.js 모듈 파일 안에 들어있는 함수(login, adduser, listuser)를 로딩한다.
+        {file:'./user', path:'/process/adduser', method:'adduser', type:'post'},
+        {file:'./user', path:'/process/listuser', method:'listuser', type:'post'}
+    ] // config.js 파일 안에 라우팅 함수를 위한 정보를 등록해 놓았다. 마찬가지로 database_loader 파일에서 스키마를 한 번에 로딩했던 것처럼 이것도 로딩할 수 있다.
 };
 // 이 config.js 정보를 이용해서 우리가 필요한 작업을 한다고 생각하면 된다.
+
+
+// 이번에는 라우팅 함수에 대한 정보를 설정해 놓고, config.js 파일 안에 넣고, 그 다음에 라우팅 함수를 불러와서 등록하는, 불러와서 사용할 수 있도록 등록하는 그 파일을 별도로 하나 만들어 보도록 한다.
