@@ -13,5 +13,8 @@
     "express-error-handler": "^1.1.0",
     "express-session": "^1.17.2",
     "mongoose": "^6.2.2"
+  },
+  "devDependencies": {
+    "gulp": "^4.0.2"
   }
 }
