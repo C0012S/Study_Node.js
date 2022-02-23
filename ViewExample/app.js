@@ -28,8 +28,9 @@ var crypto = require('crypto');
 
 var app = express();
 
+app.engine('ejs', require('ejs').__express); // Brackets에서는 실행되나 프롬프트나 VS Code의 터미널에서는 ejs 모듈을 설치해도 Error: Cannot find module 'ejs'가 떠서 추가 → 추가하니 실행 잘 된다.
 app.set('views', __dirname + '/views'); // __dirname : 현재 폴더 // views 폴더를 만든다면 views 폴더가 뷰 템플레이트를 저장할 폴더로 지정된다.
-app.set('view engine', 'ejs'); // ejs 타입의 뷰 템플레이트들을 만들겠다.
+app.set('view engine', 'ejs'); // ejs 타입의 뷰 템플레이트들을 만들겠다.  // npm install ejs --save 명령으로 ejs 외장 모듈 설치
 // views 폴더 안에 로그인 했을 때의 결과 값을 보여 줄 정보를 넣어 보도록 한다.
 
 

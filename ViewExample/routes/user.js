@@ -19,12 +19,40 @@ var login = function(req, res) {
             if (docs) {
                 console.dir(docs);
                 
-                // 이 부분을 뷰 템플레이트를 사용하는 방식으로 만든다.
+                res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+
+                // 응답 만들기 - 뷰 템플리트 이용해서 만든다.
+                var context = { // context 객체에 두 개의 속성이 들어간다.
+                    userid: paramId,
+                    username: docs[0].name // 사용자 이름은 결과 값에 들어있다.
+                }; // 자바스크립트로 변수를 받아서 대체해야 하는데 그 변수를 req.app.render의 두 번째 파라미터에 넣어야 하므로 context 생성
+                req.app.render('login_success', context, function(err, html) { // html : 뷰 템플레이트에서 필요한 변수들 또는 자바스크립트 코드를 실행한 다음에 만든 html 웹 페이지 결과 값이다.
+                    if (err) {
+                        console.error('뷰 렌더링 중 에러 발생 : ' + err.stack);
+                        console.log('에러 발생.');
+                        
+                        // 에러 전송 - 이거를 별도의 함수로 만들어서 처리하면 이 코드는 좀 더 깔끔해질 것이다.
+                        res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+                        res.write('<h1>뷰 렌더링 중 에러 발생.</h1>'); // 에러 페이지도 웹 페이지로 되어 있다. // 이것도 결국은 ejs 뷰 템플레이트를 만들어 놓고 거기서 읽어와서 뿌려 줄 수 있다.
+                        res.write('<br><p>' + err.stack + '</p>');
+                        res.end();
+                        
+                        return;
+                    }
+                    
+                    // render에서 정상적으로 html 페이지가 넘어왔다면
+                    res.end(html); // write를 한 다음에 end 해도 된다. // 응답이 클라이언트로 전송된다.
+                }); // ejs 파일 지정 // context 안에 들어있는 객체가 login_success.ejs로 전달된다. 그럼 그 객체 안에 있는 속성을 참조할 수 있다.
+                // user.js에서 응답을 보낼 때 login_success.ejs 파일의 내용을 가지고 응답을 보내는 걸 바꿔 봤다. 코드가 더 많아 보이고 복잡해 보이지만 if(err) 부분을 함수로 처리하면 된다. 그래서 send response라든가 그렇게 해서 html 페이지를 전송하는 거로 만들 수가 있을 것이다.
+                // 응답을 그냥 코드에서 만들어서 보내는 게 아니라 ejs 파일에 넣어서 보냈다는 게 달라진 점이다.
+                /* 위의 코드로 대체하여 필요없어져서 삭제
+                // 이 부분을 뷰 템플레이트를 사용하는 방식으로 만든다. // 응답 결과
                 res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
                 res.write('<h1>사용자 로그인 성공</h1>');
                 res.write('<div><p>사용자 : ' + docs[0].name + '</p></div>');
                 res.write('<br><br><a href="/public/login.html">다시 로그인하기</a>')
                 res.end();
+                */
             }
             else {
                 console.log('에러 발생.');
