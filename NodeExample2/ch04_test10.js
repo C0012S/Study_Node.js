@@ -11,3 +11,9 @@ console.log('byteLen : ' + byteLen);
 
 var str1 = buffer1.toString('utf8', 0, 6);
 console.log('str1 : ' + str1);
+
+var buffer2 = Buffer.from('Hello', 'utf8');
+console.log('두 번째 버퍼의 길이 : ' + Buffer.byteLength(buffer2)); // 버퍼의 길이는 한 번 만들어지면 길이 값을 변경하기 쉽지 않다.
+
+var str2 = buffer2.toString('utf8', 0, Buffer.byteLength(buffer2));
+console.log('str2 : ' + str2);
