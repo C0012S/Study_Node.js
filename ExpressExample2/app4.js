@@ -21,16 +21,20 @@ app.use(function(req, res, next) {
     var person = {name:'소녀시대', age:20};
     // res.send(person); // 자바스크립트 객체를 그대로 보낼 수 있다.
     
-    // var personStr = JSON.stringify(person);
+    var personStr = JSON.stringify(person); // JSON 문자열로 바꿀 때는 JSON.stringify를 사용한다. // JSON 문자열을 다시 자바스크립트 객체로 바꿀 때는 JSON.parse 메소드를 사용하면 된다.
     // res.send(personStr);
     
 //    res.writeHead(200, {"Content-Type":"application/json;charset=utf8"});
 //    res.write(person);
 //    res.end(); // → 오류 발생
     
-    res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
-    res.write(person);
-    res.end(); // → 오류 발생
+//    res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+//    res.write(person);
+//    res.end(); // → 오류 발생
+    
+    res.writeHead('200', {"Content-Type":"application/json;charset=utf8"});
+    res.write(personStr);
+    res.end();
 });
 
 var server = http.createServer(app).listen(app.get('port'), function() {
