@@ -18,9 +18,10 @@ app.use(function(req, res, next) {
     console.log('첫 번째 미들웨어 호출됨.');
     
     var userAgent = req.header('User-Agent');
-    var paramName = req.body.name || req.query.name; // POST 방식 : body // GET 방식 : query
+    // var paramName = req.body.name || req.query.name; // POST 방식 : body // GET 방식 : query
+    var paramId = req.body.id || req.query.id;
     
-    res.send('<h3>서버에서 응답. User-Agent -> ' + userAgent + '</h3><h3>Param Name -> ' + paramName + '</h3>');
+    res.send('<h3>서버에서 응답. User-Agent -> ' + userAgent + '</h3><h3>Param Id -> ' + paramId + '</h3>');
 });
 
 var server = http.createServer(app).listen(app.get('port'), function() {
