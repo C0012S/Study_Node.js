@@ -28,11 +28,11 @@ router.route('/process/login').post(function(req, res) {
     res.end();
 });
 
+app.use('/', router);
+
 app.all('*', function(req, res) {
     res.status(404).send('<h1>요청하신 페이지는 없어요.</h1>');
 }); // all : 모든 요청에 대해서 처리하겠다는 함수
-
-app.use('/', router);
 
 var server = http.createServer(app).listen(app.get('port'), function() {
     console.log('익스프레스로 웹 서버를 실행함 : ' + app.get('port'));

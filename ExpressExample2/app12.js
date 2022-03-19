@@ -5,6 +5,7 @@ var path = require('path');
 
 var bodyParser = require('body-parser'); // npm install body-parser --save로 외장 모듈 설치
 var cookieParser = require('cookie-parser'); // npm install cookie-parser --save로 외장 모듈 설치
+var expressSession = require('express-session');
 
 var app = express();
 
@@ -15,8 +16,24 @@ app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
 
 app.use(cookieParser());
+app.use(expressSession({
+    secret:'my key',
+    resave:true,
+    saveUninitialized:true
+}));
 
 var router = express.Router();
+
+router.route('/process/product').get(function(req, res) {
+    console.log('/process/product 라우팅 함수 호출됨.');
+    
+    if (req.session.user) { // 로그인이 되어 있으면 // session 안에 user 정보가 있는지
+        res.redirect('/public/product.html');
+    }
+    else { // 로그인이 안 되어 있으면
+        res.redirect('/public/login2.html');
+    }
+});
 
 router.route('/process/setUserCookie').get(function(req, res) {
     console.log('/process/setUserCookie 라우팅 함수 호출됨.');
