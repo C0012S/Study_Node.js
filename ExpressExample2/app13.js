@@ -7,10 +7,10 @@ var bodyParser = require('body-parser'); // npm install body-parser --save로 �
 var cookieParser = require('cookie-parser'); // npm install cookie-parser --save로 외장 모듈 설치
 var expressSession = require('express-session'); // npm install express-session --save로 외장 모듈 설치
 
-var multer = require('multer');
+var multer = require('multer'); // 파일 업로드 할 수 있게 도와 주는 외장 모듈 multer // npm install multer --save로 외장 모듈 설치
 var fs = require('fs');
 
-var cors = require('cors'); // cors : 다중 서버 접속에 대한 문제를 해결하기 위한 것
+var cors = require('cors'); // cors : 다중 서버 접속에 대한 문제를 해결하기 위한 것 // npm install cors --save로 외장 모듈 설치
 
 var app = express();
 
@@ -51,6 +51,39 @@ var upload = multer({
 });
 
 var router = express.Router();
+
+router.route('/process/photo').post(upload.array('photo', 1), function(req, res) {
+    console.log('/process/photo 라우팅 함수 호출됨.');
+    
+    var files = req.files;
+    console.log('==== 업로드 된 파일 ====');
+    if (files.length > 0) {
+        console.dir(files[0]);
+    }
+    else {
+        console.log('파일이 없습니다.');
+    }
+    
+    var originalname;
+    var filename;
+    var mimetype;
+    var size;
+    
+    if (Array.isArray(files)) {
+        for (var i = 0; i < files.length; i++) {
+            originalname = files[i].originalname;
+            filename = files[i].filename;
+            mimetype = files[i].mimetype;
+            size = files[i].size;
+        }
+    }
+    
+    res.writeHead(200, {"Content-Type":"text/html;charset=utf8"});
+    res.write("<h1>파일 업로드 성공</h1>");
+    res.write("<p>원본 파일 : " + originalname + "</p>");
+    res.write("<p>저장 파일 : " + filename + "</p>");
+    res.end();
+});
 
 router.route('/process/product').get(function(req, res) {
     console.log('/process/product 라우팅 함수 호출됨.');
